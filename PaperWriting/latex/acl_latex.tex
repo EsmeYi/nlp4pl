@@ -1,0 +1,116 @@
+\documentclass[11pt]{article}
+
+% Change "review" to "final" to generate the final (sometimes called camera-ready) version.
+% Change to "preprint" to generate a non-anonymous version with page numbers.
+\usepackage[preprint]{acl}
+
+% Standard package includes
+\usepackage{times}
+\usepackage{latexsym}
+
+% For proper rendering and hyphenation of words containing Latin characters (including in bib files)
+\usepackage[T1]{fontenc}
+% For Vietnamese characters
+% \usepackage[T5]{fontenc}
+% See https://www.latex-project.org/help/documentation/encguide.pdf for other character sets
+
+% This assumes your files are encoded as UTF8
+\usepackage[utf8]{inputenc}
+
+% This is not strictly necessary, and may be commented out,
+% but it will improve the layout of the manuscript,
+% and will typically save some space.
+\usepackage{microtype}
+
+% This is also not strictly necessary, and may be commented out.
+% However, it will improve the aesthetics of text in
+% the typewriter font.
+\usepackage{inconsolata}
+
+%Including images in your LaTeX document requires adding
+%additional package(s)
+\usepackage{graphicx}
+
+% If the title and author information does not fit in the area allocated, uncomment the following
+%
+%\setlength\titlebox{<dim>}
+%
+% and set <dim> to something 5cm or larger.
+% \title{Project Sketch: Cross-Modal Semantic Alignment for Low-Level Languages}
+\title{Instruction-Aware Tokenization for Cross-Modal Alignment and Hardware Intuition of Low-Level Languages}
+
+\author{Lirong Yi \\
+  Software Engineering, Chalmers University of Technology \\
+  \texttt{Lirongy@chalmers.se}\\}
+
+\begin{document}
+\maketitle
+% \begin{abstract}
+% \end{abstract}
+
+\section{Introduction}
+
+The abstraction layers in modern software engineering (from \texttt{C/C++} to \texttt{Assembly}) create a semantic gap where high-level logic is decoupled from physical hardware execution. Consequently, developers and compilers often lack immediate, static feedback on how high-level code patterns translate into low-level performance bottlenecks, such as pipeline stalls or cache misses. While Large Language Models (LLMs) have shown competence in code generation, their reliance on generic subword tokenization (e.g., BPE) fragments the atomic primitives of computer architecture. This fragmentation prevents models from capturing the structural invariants necessary for precise performance auditing and code optimization. This project proposes a Cross-Modal Semantic Alignment framework to map Source Code ($S$), Intermediate Representation ($I$), and Assembly ($A$) into a shared latent space. We hypothesize that an Instruction-Aware Tokenizer --- designed to preserve opcode and register integrity --- will yield superior alignment fidelity and enable zero-shot \emph{Hardware Intuition}.
+
+\section{Related Work}
+
+\subsection{Static Performance Prediction from Assembly}
+
+The earliest data-driven approach to hardware performance estimation is \textbf{Ithemal}~\cite{mendis2019ithemal}, which uses a two-level LSTM to embed (opcode, operand) pairs and aggregates across a basic block to predict throughput. Ithemal demonstrated that learned representations can match or exceed the accuracy of hand-tuned analytical models such as LLVM-MCA and Intel IACA. Subsequent work replaced the LSTM with a graph neural network to capture explicit instruction-level data-dependency structure, reducing mean absolute error while improving training and inference throughput. A key limitation shared by all these approaches is that they operate on a \emph{single modality} (assembly) and produce no representation that can be aligned against source code or IR; performance prediction is therefore limited to the downstream stage of compilation and cannot be surfaced to developers working at a high-level abstraction.
+
+\subsection{Instruction-Level Code Representation}
+
+Several works have developed specialized representations for IR and assembly. \textbf{IR2Vec}~\cite{ir2vec2020} encodes LLVM IR instructions as vectors derived from a seed embedding matrix propagated through a program's def-use graph. The resulting whole-program embeddings have been applied to compiler optimization tasks, but they are not learned end-to-end and do not model the assembly domain. \textbf{PalmTree}~\cite{palmtree2021} trains a BERT-style model on x86 assembly using three pre-training objectives: masked language modeling (MLM), context window prediction (CWP), and def-use prediction (DUP). PalmTree demonstrates that treating opcodes and structured operand tokens as a pseudo-language enables rich instruction embeddings for binary analysis. However, PalmTree represents registers and memory operands as fine-grained sub-tokens rather than abstracting register classes, and it neither aligns across modalities nor targets hardware performance metrics. \textbf{Nova}~\cite{nova2025} pre-trains a generative model on x86-64 assembly derived from AnghaBench with a hierarchical attention mechanism and a contrastive objective for decompilation. Nova validates that the AnghaBench corpus combined with contrastive learning is effective for assembly understanding, but it operates in a single modality and its objective is code generation rather than hardware metric prediction.
+
+\subsection{Cross-Modal Code Alignment}
+
+\textbf{IRCoder}~\cite{ircoder2024} exploits source-to-IR parallel data at the function level to improve multilingual code translation, demonstrating that LLVM IR is a strong cross-lingual pivot for NLP-oriented code tasks (summarization, translation). Its downstream tasks have no connection to micro-architectural properties. \textbf{ContraBin}~\cite{contrabin2025} is the most closely related prior work: it is the first contrastive learning framework to jointly align source code, LLVM IR, and binary representations. ContraBin introduces a simplex interpolation strategy to bridge the modality gap and evaluates on binary analysis tasks including function name recovery, code summarization, and reverse engineering. Two critical distinctions separate our work from ContraBin. First, ContraBin's supervision signal is semantic similarity between code and natural-language comments; it does not incorporate any micro-architectural labels, and therefore cannot support hardware metric prediction. Second, ContraBin employs standard BPE tokenization throughout; the effect of instruction-atomic tokenization on alignment fidelity is neither studied nor ablated.
+
+\textbf{Positioning.} Our framework occupies the intersection of two lines that have hitherto remained separate. Like Ithemal and its successors, we target micro-architectural performance metrics; like ContraBin, we align source, IR, and assembly with contrastive learning. The novel contributions relative to all prior work are: (i) \emph{llvm-mca}-derived labels as explicit supervision on the assembly encoder, enabling zero-shot property inheritance into the source domain; and (ii) a systematic ablation of an Instruction-Aware Tokenizer against BPE, a comparison absent from the literature.
+
+\section{Problem Statement}
+
+\noindent\textbf{The Abstraction-Performance Gap.} Modern developers and AI coding agents author code in high-level abstractions that provide no immediate feedback on physical consequences such as cache misses or pipeline stalls. Existing diagnostic tools require expensive dynamic profiling or slow architectural simulators; neither can be embedded in a static analysis or code-generation loop. Prior work like Ithemal~\cite{mendis2019ithemal} demonstrated that neural models can learn micro-architectural behaviors from assembly alone, but this leaves performance feedback inaccessible until the final compilation stage. We address this by aligning $S$, $I$, and $A$ into a shared latent space, so that performance signals acquired from assembly can be inherited by source-level embeddings via proximity in the joint manifold.
+
+\noindent\textbf{Semantic Fragmentation from BPE.} Models such as the LLM Compiler~\cite{cummins2025llm} demonstrate strong competence in code optimization and disassembly, yet their reliance on Byte Pair Encoding (BPE) fragments the atomic primitives of computer architecture. A vector instruction like \texttt{vaddps} is split into \texttt{v}, \texttt{add}, and \texttt{ps}, destroying the opcode's indivisible hardware semantics. We address this by designing an Instruction-Aware Tokenizer that maps opcodes (e.g., \texttt{vaddps}, \texttt{phi}) to unique vocabulary IDs and abstracts register operands into class tokens (e.g., \texttt{[GPR]}, \texttt{[SIMD]}), preventing sub-opcode fragmentation while reducing vocabulary sparsity.
+
+\noindent\textbf{Static Hardware Metric Prediction.} Obtaining precise hardware metrics is historically a dynamic task. Recent work such as PrETi~\cite{xu2025preti} shows that LLVM-based simulation can approximate execution time statically, but the prediction model remains decoupled from any high-level code representation. We close this gap by supervising the assembly encoder with \textit{llvm-mca}-derived labels (IPC, Block RThroughput) and demonstrating that the resulting micro-architectural signatures transfer zero-shot to the aligned source encoder via a lightweight linear probe, without requiring execution or heavyweight simulation.
+
+\section{Methodology}
+\subsection{Data Generation}
+
+I will utilize the \texttt{AnghaBench}~\cite{da2021anghabench} dataset (1M+ C functions) to generate a large-scale corpus of $(S, I, A)$ triplets using the LLVM toolchain:
+
+\begin{itemize}
+    \item Source ($S$): Raw C code snippets.
+    \item IR ($I$): Multiple LLVM-IR variants generated via different optimization levels (e.g., \texttt{-O2, -O3}) to capture semantic invariants.
+    \item Assembly ($A$): Targeted x86-64 machine code generated via \textit{llc}.
+    \item Hardware Labels: Each triplet will be annotated with micro-architectural performance counters (e.g., \texttt{IPC}, \texttt{Cache Misses}) generated via \textit{llvm-mca} (LLVM Machine Code Analyzer).
+\end{itemize}
+
+\subsection{Instruction-Aware Tokenization}
+
+To address the inherent limitations of BPE in system-level languages, the proposed tokenizer will:
+
+\begin{itemize}
+    \item Enforce Opcode Atomicity: Map core instruction sets to unique vocabulary IDs.
+    \item Abstract Registers: Categorize architectural registers (e.g., \texttt{[GPR], [SIMD]}) to maintain structural patterns while reducing vocabulary sparsity.
+    \item Preserve Numerical Strides: Retain immediate values that are critical for identifying memory access patterns and cache behavior.
+\end{itemize}
+
+\subsection{Architecture: Shared Latent Space Alignment}
+
+I will implement a Tiny-Transformer (4-6 layers) architecture tailored for high-density structural learning. InfoNCE (Contrastive Loss) will be used to maximize the similarity between matching triplets (positive pairs) while minimizing similarity between unrelated code segments in the latent manifold.
+
+\section{Evaluation}
+The proposed framework will be evaluated through three distinct tasks to verify both alignment quality and hardware intuition:
+
+\textbf{\textit{Task 1:}} Cross-Modal Retrieval (Recall@K): This task assesses the fidelity of the semantic alignment. Given a Source Code embedding from the test set, we will perform a nearest-neighbor search across a large library of Assembly embeddings. Success is measured by the accuracy of retrieving the ground-truth corresponding assembly snippet (Recall@1, Recall@5).
+
+\textbf{\textit{Task 2:}} Hardware Intuition Probing (Zero-shot Prediction): To prove the emergence of intuition, we will use the frozen Source Encoder to extract embeddings of unseen C++ kernels. A lightweight linear probe will then be trained to predict hardware metrics from these source-level embeddings. This evaluates if the Source Encoder has successfully inherited physical properties from the aligned Assembly space.
+
+\textbf{\textit{Task 3:}} Qualitative Visualization (Clustering Analysis): We will apply dimensionality reduction techniques (e.g., t-SNE or UMAP) to the joint latent space. The goal is to observe whether programs with similar hardware bottlenecks cluster together, regardless of their high-level syntactic differences.
+
+\bibliography{custom}
+
+\end{document}

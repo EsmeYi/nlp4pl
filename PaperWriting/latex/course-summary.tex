@@ -1,0 +1,56 @@
+% !TeX program = xelatex
+\documentclass[11pt, a4paper]{article}
+
+% --- UNIVERSAL PREAMBLE BLOCK ---
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+\usepackage{fontspec}
+\usepackage[english, bidi=basic, provide=*]{babel}
+
+\babelfont{rm}{Noto Sans}
+
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+}
+
+\title{\textbf{Summary of Meeting 1: Deep Learning for NLP}}
+\author{Lirong Yi, lirongy@chalmers.se}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+The first meeting progressed from a foundational Statistical Bigram Model, which achieved a baseline Perplexity (PPL) of 12.7. This result represents the Maximum Likelihood Estimation (MLE) for a first-order Markov process on the provided dataset. To address the inherent issue of data sparsity, Laplace smoothing was implemented; empirical results showed that while a high $k=1$ slightly increased PPL to 12.8 due to probability mass redistribution, an infinitesimal $k=0.00001$ maintained the 12.7 baseline while successfully preventing zero-probability evaluation failures.
+
+The transition to a Neural One-hot Model initially resulted in a suboptimal PPL of 13.1. However, increasing the optimization depth to 100 epochs facilitated convergence to 12.8, demonstrating that single-layer neural architectures serve as numerical approximators of the statistical transition matrix. In contrast, the Embedding-based MLP architecture yielded a higher PPL of 13.0 after 200 epochs. This performance degradation indicates an information bottleneck: for low-complexity bigram tasks, compressing discrete tokens into low-dimensional embedding spaces introduces approximation errors that outweigh the benefits of dense representation.
+
+The final phase utilized a pre-trained DistilBERT model for sentiment classification. By leveraging the representation of the \texttt{[CLS]} token, the model achieved a classification accuracy of 89.04\% within a single epoch. Attention map visualizations confirmed that specific heads in early layers specialize in local syntactic dependencies (diagonal attention patterns), while deeper layers aggregate global semantic features. These results highlight the efficiency of transfer learning, where pre-trained weights provide a robust semantic prior that significantly outperforms task-specific training from scratch.
+
+\begin{table}[htbp]
+\centering
+\caption{Summary of Results}
+\label{tab:results}
+\begin{tabular}{@{}lllc@{}}
+\toprule
+\textbf{Model Class} & \textbf{Core Mechanism} & \textbf{Optimization/Smoothing} & \textbf{Result} \\ \midrule
+Statistical          & Count-based Bigram      & MLE (Baseline)                  & PPL: 12.7       \\
+Statistical          & Add-$k$ Smoothing       & $k=0.00001$                     & PPL: 12.7       \\
+Neural (Linear)      & One-hot Projection      & 100 Epochs                      & PPL: 12.8       \\
+Neural (Non-linear)  & 32D Embedding + MLP     & 200 Epochs                      & PPL: 13.0       \\ \midrule
+Transformer          & BERT Fine-tuning        & 1 Epoch (AdamW)                 & Acc: 89.04\%    \\ \bottomrule
+\end{tabular}
+\end{table}
+
+A core observation during these experiments was the dual-stage transformation required to bridge human language and neural computation. Tokenization serves as the atomization of text, defining the granularity at which the model perceives the world. While character-level models offer a minimal vocabulary, they suffer from excessive sequence lengths and high fertility rates, which can dilute semantic density. Conversely, subword tokenization (e.g., WordPiece in BERT) balances the trade-off between vocabulary size and sequence length, effectively solving the Out-of-Vocabulary (OOV) problem by decomposing rare words into meaningful fragments. 
+
+Following tokenization, Embedding acts as a geometric mapping, translating these discrete tokens into a continuous, high-dimensional coordinate system. The transition from one-hot encoding to dense embeddings represents a shift from a sparse, orthogonal space to a manifold where semantic proximity is reflected by spatial distance. The experiments suggest that the efficacy of these embeddings is heavily influenced by the chosen tokenization granularity; a bottleneck in the embedding layer (as seen in the MLP experiment) can degrade the performance of even a well-tokenized sequence.
+
+
+\end{document}
