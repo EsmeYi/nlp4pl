@@ -55,7 +55,8 @@ import tqdm
 
 def _default_llvm_bin() -> str:
     """Pick a sensible default LLVM bin path based on the current platform."""
-    if env := os.environ.get("LLVM_BIN"):
+    env = os.environ.get("LLVM_BIN")
+    if env:
         return env
     if platform.system() == "Darwin":
         return "/opt/homebrew/opt/llvm/bin"

@@ -17,7 +17,8 @@ module load LLVM/16.0.6-GCCcore-12.3.0 Clang/16.0.6-GCCcore-12.3.0
 # Python: use your venv / conda env; ensure tqdm is installed
 # Uncomment whichever applies:
 # source ~/venv/bin/activate
-# module load Python/3.11.3-GCCcore-12.3.0 && pip install --quiet tqdm
+module load Python/3.11.3-GCCcore-12.3.0
+pip install --quiet tqdm
 
 export LLVM_BIN=/apps/Arch/software/Clang/16.0.6-GCCcore-12.3.0/bin
 
@@ -33,7 +34,7 @@ echo "Node : $SLURMD_NODENAME"
 echo "CPUs : $SLURM_CPUS_PER_TASK"
 echo "Start: $(date)"
 
-python "${SCRIPT_DIR}/generate_triplets.py" \
+python3 "${SCRIPT_DIR}/generate_triplets.py" \
     --bench   "${SCRIPT_DIR}/AnghaBench" \
     --output  "${SCRIPT_DIR}/triplets.jsonl" \
     --workers "${SLURM_CPUS_PER_TASK}" \
